@@ -1,0 +1,124 @@
+/*
+ * Bittorrent Client using Qt and libtorrent.
+ * Copyright (C) 2017  Vladimir Golovnev <glassez@yandex.ru>
+ * Copyright (C) 2010  Christophe Dumez <chris@universaltorrent.org>
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ *
+ * In addition, as a special exception, the copyright holders give permission to
+ * link this program with the OpenSSL project's "OpenSSL" library (or with
+ * modified versions of it that use the same license as the "OpenSSL" library),
+ * and distribute the linked executables. You must obey the GNU General Public
+ * License in all respects for all of the code used other than "OpenSSL".  If you
+ * modify file(s), you may extend this exception to your version of the file(s),
+ * but you are not obligated to do so. If you do not wish to do so, delete this
+ * exception statement from your version.
+ */
+
+#include "bandwidthscheduler.h"
+
+#include <chrono>
+
+#include <QDate>
+#include <QTime>
+
+#include "base/preferences.h"
+
+using namespace std::chrono_literals;
+
+namespace
+{
+    bool isScheduledDay(const Scheduler::Days schedulerDays, const int day)
+    {
+        switch (schedulerDays)
+        {
+        case Scheduler::Days::EveryDay:
+            return true;
+        case Scheduler::Days::Monday:
+            return day == 1;
+        case Scheduler::Days::Tuesday:
+            return day == 2;
+        case Scheduler::Days::Wednesday:
+            return day == 3;
+        case Scheduler::Days::Thursday:
+            return day == 4;
+        case Scheduler::Days::Friday:
+            return day == 5;
+        case Scheduler::Days::Saturday:
+            return day == 6;
+        case Scheduler::Days::Sunday:
+            return day == 7;
+        case Scheduler::Days::Weekday:
+            return ((day >= 1) && (day <= 5));
+        case Scheduler::Days::Weekend:
+            return ((day == 6) || (day == 7));
+        }
+
+        Q_UNREACHABLE_RETURN(false);
+    }
+}
+
+BandwidthScheduler::BandwidthScheduler(QObject *parent)
+    : QObject(parent)
+{
+    connect(&m_timer, &QTimer::timeout, this, &BandwidthScheduler::onTimeout);
+}
+
+void BandwidthScheduler::start()
+{
+    m_lastAlternative = isTimeForAlternative();
+    emit bandwidthLimitRequested(m_lastAlternative);
+
+    // Timeout regularly to accommodate for external system clock changes
+    // eg from the user or from a timesync utility
+    m_timer.start(30s);
+}
+
+bool BandwidthScheduler::isAlternativeRequested() const
+{
+    return m_lastAlternative;
+}
+
+bool BandwidthScheduler::isTimeForAlternative() const
+{
+    const Preferences *const pref = Preferences::instance();
+
+    const QTime start = pref->getSchedulerStartTime();
+    const QTime end = pref->getSchedulerEndTime();
+    const QTime now = QTime::currentTime();
+    const Scheduler::Days schedulerDays = pref->getSchedulerDays();
+    const QDate today = QDate::currentDate();
+
+    if (start <= end)
+        return (start <= now) && (now <= end) && isScheduledDay(schedulerDays, today.dayOfWeek());
+
+    // The period crosses midnight, so it belongs to the day it starts on
+    if (now >= start)
+        return isScheduledDay(schedulerDays, today.dayOfWeek());
+    if (now <= end)
+        return isScheduledDay(schedulerDays, today.addDays(-1).dayOfWeek());
+    return false;
+}
+
+void BandwidthScheduler::onTimeout()
+{
+    const bool alternative = isTimeForAlternative();
+
+    if (alternative != m_lastAlternative)
+    {
+        m_lastAlternative = alternative;
+        emit bandwidthLimitRequested(alternative);
+    }
+}

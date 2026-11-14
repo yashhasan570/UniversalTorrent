@@ -1,0 +1,3 @@
+IDI_ICON1 ICON DISCARDABLE "icons/universaltorrent.ico"
+IDI_ICON2 ICON DISCARDABLE "icons/universaltorrent_file.ico"
+1 24 DISCARDABLE "universaltorrent.exe.manifest"

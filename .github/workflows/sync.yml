@@ -1,0 +1,43 @@
+name: Sync upstream
+
+on:
+  schedule:
+    - cron: "50 5 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Sync from upstream
+        run: |
+          git config user.name "yashhasan570"
+          git config user.email "hasankhalid700570@gmail.com"
+          git clone --depth 1 https://github.com/qbittorrent/qBittorrent /tmp/upstream
+          cd /tmp/upstream
+          git ls-files | rsync -a --delete \
+            --exclude=.git \
+            --exclude=.github \
+            --exclude=scripts/migrate.py \
+            --exclude=README.md \
+            ./ "$GITHUB_WORKSPACE/"
+          cd "$GITHUB_WORKSPACE"
+
+      - name: Reapply rebrand
+        run: python3 scripts/migrate.py
+
+      - name: Commit and push
+        run: |
+          git add -A
+          git diff --cached --quiet && echo "No changes" && exit 0
+          git commit -m "Sync upstream $(date -u +%Y-%m-%d)"
+          git push
