@@ -42,10 +42,11 @@
   <developer id="org.universaltorrent">
     <name>The Universal Torrent Project</name>
   </developer>
-  <url type="homepage">https://github.com/yashhasan570/UniversalTorrent/</url>
-  <url type="bugtracker">https://github.com/yashhasan570/UniversalTorrent/</url>
-  <url type="faq">https://t.me/johnconstantine570</url>
-  <url type="help">https://t.me/johnconstantine570</url>
+  <url type="homepage">https://www.universaltorrent.org/</url>
+  <url type="bugtracker">https://bugs.universaltorrent.org/</url>
+  <url type="faq">https://wiki.universaltorrent.org/Frequently-Asked-Questions</url>
+  <url type="help">https://forum.universaltorrent.org/</url>
+  <url type="donation">https://www.universaltorrent.org/donate</url>
   <url type="translate">https://wiki.universaltorrent.org/How-to-translate-Universal Torrent</url>
   <url type="vcs-browser">https://github.com/universaltorrent/Universal Torrent</url>
   <url type="contribute">https://github.com/universaltorrent/Universal Torrent/blob/master/CONTRIBUTING.md</url>
